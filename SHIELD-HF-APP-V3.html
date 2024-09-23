@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safemode Shield HF</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; /* Center all content */
+        }
+        h1 { text-align: center; }
+        .breadcrumb { font-size: 14px; margin-bottom: 10px; }
+        
+        .button-group {
+            display: inline-flex; 
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        .layer-btn, .category-btn, .subcategory-btn, .item-btn {
+            margin: 5px;
+            padding: 10px;
+            cursor: pointer;
+            border: none;
+            width: 250px;
+            background-color: lightgrey; /* Remove color coding */
+            text-align: center;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 300px;
+            background-color: black;
+            color: #fff;
+            text-align: left;
+            border-radius: 5px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            top: 150%; /* Adjust to avoid clipping */
+            left: 50%;
+            margin-left: -150px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            white-space: normal; /* Make sure definitions are fully visible */
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        #exportBtn, #startOverBtn, #clearAllBtn {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: lightblue;
+            border: none;
+            cursor: pointer;
+        }
+        #previousPaths {
+            margin-top: 20px;
+        }
+        #previousPaths ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        #previousPaths ul li {
+            padding: 5px;
+            background-color: #f0f0f0;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+        }
+        .remove-btn, .primary-btn {
+            margin-left: 10px;
+            cursor: pointer;
+        }
+        .primary {
+            border: 2px solid gold;
+        }
+    </style>
+</head>
+<body>
+
+<h1>SHIELD HF TAXONOMY</h1>
+
+<div>
+    <label for="iqsmsRef">IQSMS Reference Number: </label>
+    <input type="text" id="iqsmsRef" placeholder="Enter reference number">
+</div>
+
+<div class="breadcrumb">
+    <p id="breadcrumb">You are here: </p>
+</div>
+
+<!-- Layer Buttons -->
+<div id="layers">
+    <div class="tooltip">
+        <button class="layer-btn ACTS" onclick="showCategories('ACTS')">ACTS</button>
+        <span class="tooltiptext">The active failures, omission, actions or deviations from authorized procedures committed by an operator with an impact on the safety of operations.</span>
+    </div>
+    <div class="tooltip">
+        <button class="layer-btn PRECONDITIONS" onclick="showCategories('PRECONDITIONS')">PRECONDITIONS</button>
+        <span class="tooltiptext">The environmental factors or conditions affecting human performance contributing to errors or deviations from authorized procedures.</span>
+    </div>
+    <div class="tooltip">
+        <button class="layer-btn SUPERVISION" onclick="showCategories('SUPERVISION')">SUPERVISION</button>
+        <span class="tooltiptext">The decisions or policies of the supervisory chain of command that affect practices, conditions or actions, resulting in errors or unsafe situations.</span>
+    </div>
+    <div class="tooltip">
+        <button class="layer-btn ORGANISATION" onclick="showCategories('ORGANISATION')">ORGANISATION</button>
+        <span class="tooltiptext">The decisions, policies, or methods adopted at an organizational level affecting both supervisory and individual operator performance.</span>
+    </div>
+</div>
+
+<!-- Category Buttons -->
+<div id="categories" style="display:none;"></div>
+
+<!-- Subcategory Buttons (for PRECONDITIONS layer only) -->
+<div id="subcategories" style="display:none;"></div>
+
+<!-- Item Buttons -->
+<div id="items" style="display:none;"></div>
+
+<!-- Selected Path -->
+
+<button id="backBtn" onclick="goBack()">Back</button>
+
+<script>
+
+function goBack() {
+    // Check if we are in items
+    if (document.getElementById('items').style.display === 'block') {
+        if (fullPath.includes('PRECONDITIONS')) {
+            // If we're in PRECONDITIONS, go back to subcategories
+            document.getElementById('items').style.display = 'none';
+            document.getElementById('subcategories').style.display = 'block';
+            fullPath.pop(); // Remove the last step from the path
+        } else {
+            // If not in PRECONDITIONS, go back to categories
+            document.getElementById('items').style.display = 'none';
+            document.getElementById('categories').style.display = 'block';
+            fullPath.pop(); // Remove the last step from the path
+        }
+    } 
+    // Check if we are in subcategories
+    else if (document.getElementById('subcategories').style.display === 'block') {
+        // Go back to categories in PRECONDITIONS
+        document.getElementById('subcategories').style.display = 'none';
+        document.getElementById('categories').style.display = 'block';
+        fullPath.pop(); // Remove the last step from the path
+    } 
+    // Check if we are in categories
+    else if (document.getElementById('categories').style.display === 'block') {
+        // If we're in PRECONDITIONS, go back to layers
+        if (fullPath.includes('PRECONDITIONS')) {
+            document.getElementById('categories').style.display = 'none';
+            document.getElementById('layers').style.display = 'block';
+            fullPath.pop(); // Remove the last step from the path
+        } else {
+            // For all other layers (ACTS, SUPERVISION, ORGANISATION), go back to layers
+            document.getElementById('categories').style.display = 'none';
+            document.getElementById('layers').style.display = 'block';
+            fullPath.pop(); // Remove the last step from the path
+        }
+    }
+    updateBreadcrumb(); // Update the breadcrumb after navigating
+}
+
+</script>
+<div id="pathDisplay">
+    <p id="path">Full path: </p>
+</div>
+
+<!-- Start Over and Export Buttons -->
+<button id="startOverBtn" onclick="startOver()">Start Over</button>
+<button id="clearAllBtn" onclick="clearAllSelectedItems()">Clear All Selected Items</button>
+
+<!-- Previous Paths -->
+<div id="previousPaths">
+    <h3>Selected Items:</h3>	
+    <p style="font-style: italic;">Right click item to remove, or to mark as primary.</p>
+    <ul id="pathList"></ul>
+</div>
+
+<script>
+    let fullPath = [];
+    let previousPaths = [];
+    let iqsmsRef = '';
+
+    const data = {
+        'ACTS': ['PERCEPTION AND VIGILANCE', 'RESPONSE EXECUTION', 'MEMORY', 'PLANNING AND DECISION MAKING', 'INTENTIONAL DEVIATION FROM AUTHORIZED PROCEDURE'],
+        'PRECONDITIONS': ['ENVIRONMENTAL FACTORS', 'INDIVIDUAL FACTORS'],
+        'SUPERVISION': ['FAILURE TO CORRECT A KNOWN PROBLEM', 'INADEQUATE SUPERVISION', 'PLANNED INAPPROPRIATE OPERATIONS', 'SUPERVISORY VIOLATIONS'],
+        'ORGANISATION': ['CULTURE / CLIMATE', 'PROCESSES', 'RESOURCES'],
+        'subcategories': {
+            'ENVIRONMENTAL FACTORS': ['PHYSICAL ENVIRONMENT', 'TECHNOLOGICAL ENVIRONMENT', 'COMMUNICATION', 'SELF-IMPOSED STRESS'],
+            'INDIVIDUAL FACTORS': ['AWARENESS COGNITIVE FACTORS', 'ADVERSE PSYCHOLOGICAL', 'ADVERSE PHYSIOLOGICAL', 'PHYSICAL OR MENTAL', 'COMPETENCE OR SKILLS', 'PERCEPTION']
+        },
+        'items': {
+             // ACTS Layer Items
+            'PERCEPTION AND VIGILANCE': [
+                { code: 'AP1', title: 'No/wrong/late visual detection', definition: 'The operator does not detect (or detects too late or inaccurately) a visual signal necessary to formulate a proper action plan or make a correct decision.' },
+                { code: 'AP2', title: 'No/wrong/late auditory detection', definition: 'The operator does not detect (or detects too late or inaccurately) an auditory signal necessary to formulate a proper action plan or make a correct decision.' },
+                { code: 'AP3', title: 'No/wrong/late kinaesthetic detection', definition: 'The operator does not detect (or detects too late or inaccurately) a kinaesthetic signal necessary to formulate a proper action plan or make a correct decision.' },
+                { code: 'AP4', title: 'No/wrong/late with other senses (e.g. smell, temperature)', definition: 'The operator does not perceive (or perceives too late or inaccurately) information received with senses different from vision, hearing, and touch, which is necessary to formulate a proper action plan or make a correct decision.' }
+            ],
+            'RESPONSE EXECUTION': [
+                { code: 'AR1', title: 'Timing error', definition: 'The operator has planned to take an action which is appropriate for the situation, but executes it either too early or too late.' },
+                { code: 'AR2', title: 'Sequence error', definition: 'The operator carries out a series of actions in the wrong sequence.' },
+                { code: 'AR3', title: 'Right action on the wrong object', definition: 'The operator has planned to take an action which is appropriate for the situation but - when executing it - selects a command (e.g. lever, knob, button, HMI element) different from the intended one.' },
+                { code: 'AR4', title: 'Wrong action on the right object', definition: 'The operator selects the correct object (e.g. lever, knob, button, HMI element), but performs an action that is not the correct one.' },
+                { code: 'AR5', title: 'Incorrect/unclear transmission of information', definition: 'The operator transmits to other actors information which is incorrect or unclear.' },
+                { code: 'AR6', title: 'No transmission of information', definition: 'The operator fails to transmit information which is necessary for other actors to operate safely / effectively.' },
+                { code: 'AR7', title: 'Lack of physical coordination', definition: 'The operator takes an action which is appropriate for the situation, but executes it in a wrong manner, due to lack of physical coordination.' }
+            ],
+            'MEMORY': [
+                { code: 'AM1', title: 'Forget actions/intentions', definition: 'The operator has formulated an intention or elaborated an action plan which is appropriate for the situation, but then forgets to execute it.' },
+                { code: 'AM2', title: 'No/inaccurate recall of information', definition: 'The operator fails to retrieve or recall accurately from her/his memory and is unable to formulate a proper action plan or make a correct decision.' }
+            ],
+            'PLANNING AND DECISION MAKING': [
+                { code: 'AD1', title: 'Incorrect decision or plan', definition: 'The operator fails to elaborate an action plan or make a decision which is sufficiently accurate to manage the specified situation.' },
+                { code: 'AD2', title: 'Late decision or plan', definition: 'The operator fails to elaborate a timely action plan or decision to manage the situation.' },
+                { code: 'AD3', title: 'No decision or plan', definition: 'The operator fails to elaborate any action plan or decision to manage the situation.' },
+                { code: 'AD4', title: 'Positive action to prevent accident', definition: 'Any decision taken that helped in avoiding an accident or contributed to limiting the consequences.' }
+            ],
+            'INTENTIONAL DEVIATION FROM AUTHORIZED PROCEDURE': [
+                { code: 'AI1', title: 'Workaround in normal conditions', definition: 'The operator decides to intentionally deviate from an agreed procedure or practice in a normal operating condition.' },
+                { code: 'AI2', title: 'Routine workaround', definition: 'The operator habitually and intentionally deviates from an agreed procedure or practice on a regular basis.' },
+                { code: 'AI3', title: 'Workaround in exceptional conditions', definition: 'The operator decides to intentionally deviate from an agreed procedure or practice in an exceptional operating condition.' },
+                { code: 'AI4', title: 'Sabotage', definition: 'The operator decides to intentionally deviate from an agreed procedure or practice in order to create damage to the system or organization s/he is working with.' }
+            ],
+            // Supervision Layer Items (Uppercase Categories)
+            'FAILURE TO CORRECT A KNOWN PROBLEM': [
+                { code: 'SF1', title: 'Inadequate personnel management', definition: 'A supervisor fails to identify an operator who exhibits recognizable risky behaviors or fails to institute the necessary remedial actions, leading to unsafe operator performance.' },
+                { code: 'SF2', title: 'Inadequate operations management', definition: 'A supervisor fails to correct known unsafe practices, conditions, guidance, or procedure, which allows hazardous practices within the scope of his/her authority.' }
+            ],
+            'INADEQUATE SUPERVISION': [
+                { code: 'SI1', title: 'Inadequate leadership, supervision, or oversight', definition: 'Availability, competency, quality, or timeliness of leadership, supervision, or oversight does not meet task demands and creates an unsafe situation.' },
+                { code: 'SI2', title: 'Inappropriate learned behavior', definition: 'An individual’s learning is influenced by the behavior of supervisors and manifests itself in actions that are either inappropriate to the individual’s skill level or violate standard procedures.' },
+                { code: 'SI3', title: 'Inadequate training programs', definition: 'Inadequate on unavailable training programs (either one-time, recurrent, upgrade, transition or any other local training program) leading to unsafe operator performance.' },
+                { code: 'SI4', title: 'Supervision – policy', definition: 'Missing or unclear policy or guidance leads to unsafe operator performance.' },
+                { code: 'SI5', title: 'Supervision – personality conflict', definition: 'A "personality conflict" between a supervisor and an operator experience leads to an inadequate or unsafe performance.' },
+                { code: 'SI6', title: 'Supervision – lack of feedback', definition: 'Lack of feedback from supervisory or management personnel following the provision by a front-end operator of information critical for a potential safety issue (failure to close the loop).' }
+            ],
+            'PLANNED INAPPROPRIATE OPERATIONS': [
+                { code: 'SP1', title: 'Activity led or directed beyond capability', definition: 'Supervisor/management directs personnel to undertake an activity beyond their skill level or beyond the capabilities of their equipment, leading to unsafe operator performance.' },
+                { code: 'SP2', title: 'Inadequate crew or team makeup or composition', definition: 'Supervisor/management fails to identify inadequate makeup or composition of crew or team for a given activity/operation, leading to unsafe operator performance.' },
+                { code: 'SP3', title: 'Inappropriate supervisory pressure', definition: 'Inappropriate pressure by supervisor/management causes an operator to feel pressured to perform a task or activity, leading to an erroneous performance.' },
+                { code: 'SP4', title: 'Limited experience', definition: 'Supervisor selects an individual whose experience for a specific operation, event or scenario is too limited or insufficiently current, leading to unsafe operator performance.' },
+                { code: 'SP5', title: 'Inadequate risk assessment', definition: 'Supervision does not adequately evaluate the risks associated with a specific operation or scenario or overestimates the associated risk assessment tools/programs, leading to unsafe operator performance.' },
+                { code: 'SP6', title: 'Authorized unnecessary hazard', definition: 'Supervision authorizes a task or operation that is unnecessarily hazardous given the expected benefits, leading to unsafe operator performance.' }
+            ],
+            'SUPERVISORY VIOLATIONS': [
+                { code: 'SS1', title: 'Supervision failure to enforce existing rules', definition: 'Normally constituted authority or supervisor fails to enforce organizational and operating rules, leading to operator deviations from authorized procedures.' },
+                { code: 'SS2', title: 'Supervision allowing unwritten policies to become standard', definition: 'Supervisor allows policies that have not been formally recognized by the organization to be perceived as standards, leading to unsafe operator performance.' },
+                { code: 'SS3', title: 'Directed violation', definition: 'Supervisor directs a subordinate to violate existing regulations, procedures or technical guidance, leading to unsafe operator performance.' },
+                { code: 'SS4', title: 'Directed task with Inadequate currency', definition: 'Supervisor/manager inappropriately allows an operator to perform a task for which s/he is not current, according to the training requirements specified for the associated activity, leading to unsafe operator performance.' },
+                { code: 'SS5', title: 'Authorized unqualified operator(s) for task', definition: 'Supervisor/manager inappropriately allows an operator to perform a task for which s/he is not qualified or has not met the general training requirements specified for the associated activity.' }
+            ],
+            // Organisation Layer Items
+            'CULTURE / CLIMATE': [
+                { code: 'OC1', title: 'Safety culture', definition: 'There is a poor safety culture in the organization. This may be assessed formally through a survey or inferred from other idiosyncratic sources of information in the organization.' },
+                { code: 'OC2', title: 'Company safety climate / Morale', definition: 'Low company morale leads to a poor attitude to safety and organizational safety. Those working in the organization don’t believe the organization "cares" for them and likewise they do not "care" about the organization.' },
+                { code: 'OC3', title: 'Contractor relations', definition: 'Relationships, communications, or inter-operability between the organization and contractors (Prime or Sub) is not optimal and this creates an unsafe working relationship. This includes oversight and insight, resulting in poor safety.' }
+            ],
+            'PROCESSES': [
+                { code: 'OP1', title: 'Organization structure', definition: 'The structure of the organization does not facilitate safety issues being escalated to management, does not have clear safety responsibilities, or is so complicated that safety concerns are lost.' },
+                { code: 'OP2', title: 'Tempo of operations', definition: 'The speed with which an organization is expected to operate leaves little space for the consideration of anything except getting the job done, thus reducing safety.' },
+                { code: 'OP3', title: 'Organizational risk assessment', definition: 'Organisational risk assessment is not carried out or, is carried out but does not identify and make available relevant safety issues.' },
+                { code: 'OP4', title: 'Program oversight or management', definition: 'Oversight is ineffective in identifying safety shortfalls, or does not have the authority to enforce the addressing safety shortcomings.' },
+                { code: 'OP5', title: 'Publications / procedures / written guidance', definition: 'Publications and written documentation are not sufficient to ensure that a task can be carried out safely. Procedures may exist, but are poor and cannot be used to perform the task they support. Even where good procedures exist they do not account for all the operational circumstances within which they are expected to be applied (work as imagined versus work as done).' },
+                { code: 'OP6', title: 'Organizational training', definition: 'Training at the organisational level does not sufficiently reinforce the importance of safety, or make the organizational responsibilities for safety clear.' }
+            ],
+            'RESOURCES': [
+                { code: 'OR1', title: 'Personnel', definition: 'There are insufficient personnel who are suitably qualified and experienced to perform tasks safely.' },
+                { code: 'OR2', title: 'Funding / budgets', definition: 'Budgets and funding are insufficient to allow the operation to proceed with adequate resources for safe operations.' },
+                { code: 'OR3', title: 'Materials or parts', definition: 'Materials or parts that have been incorporated into the system are not adequate to perform tasks safely.' },
+                { code: 'OR4', title: 'Equipment availability', definition: 'Equipment that operators have to use is not available to them at the time that the task has to be performed.' },
+                { code: 'OR5', title: 'Design of equipment or procedures', definition: 'The design of the equipment / procedure to support the operation / task is not suitable to allow the task to be performed safely. The equipment might also prevent operators working in an efficient manner and indirectly encourage short-cuts or workarounds.' },
+                { code: 'OR6', title: 'Operational information', definition: 'Operational information necessary to perform the task safely, or meet the requirements of a safe operation is not available at the points in the organisation that it is required. This information includes weather briefings/forecasts, intelligence, operational planning material or other information necessary for safe operations. This might also include operational incident data (within the scope of intelligence) being available to management or company safety directives not being made available to operational staff' },
+                { code: 'OR7', title: 'Workspaces - interior offices, workspace layout, machine room design', definition: 'Interior workspaces are not conducive to an optimised work environment or safe operation. This refers to the physical layout of the building, cabin, bridge, machine room or workspace and the offices within which people are expected to function.' },
+                { code: 'OR8', title: 'Workspaces - exterior', definition: 'Exterior workspaces are not conducive to an optimised work environment or safe operation. This refers to the physical layout of the exterior of the building/ship/aircraft in which people are expected to function.' }
+            ],
+            // Preconditions Layer Items (fully populated)
+            'PHYSICAL ENVIRONMENT': [
+                { code: 'PEP1', title: 'Vision affected by environment', definition: 'Environmental conditions affect the operator’s vision, contributing to an error.' },
+                { code: 'PEP2', title: 'Movement affected by environment', definition: 'Environmental conditions affect the operator’s movement, contributing to an error.' },
+                { code: 'PEP3', title: 'Hearing affected by environment', definition: 'Environmental conditions affect the operator’s ability to hear, contributing to an error.' },
+                { code: 'PEP4', title: 'Mental processing affected by environment', definition: 'Environmental conditions affect the operator’s ability to mentally process or think about information, contributing to an error.' },
+                { code: 'PEP5', title: 'Heat or cold stress', definition: 'Exposure to heat or cold causes the operator’s performance capabilities to degrade.' },
+                { code: 'PEP6', title: 'Weather', definition: 'Weather conditions degrade the operator’s performance capabilities.' },
+                { code: 'PEP7', title: 'Acceleration', definition: 'Forces acting on a body by acceleration or gravity lead to an unsafe situation or contribute to an error.' }
+            ],
+            'TECHNOLOGICAL ENVIRONMENT': [
+                { code: 'PET1', title: 'Ergonomics and human-machine interface issues', definition: 'The design of tools and human-machine interfaces (e.g., controls, switches, displays) induces unsafe performance by the operator.' },
+                { code: 'PET2', title: 'Automated system creates an unsafe situation', definition: 'The design, function, reliability, or logic of automated systems induces unsafe performance by the operator.' },
+                { code: 'PET3', title: 'Workspace or working position incompatible with operation', definition: 'The workspace layout or design of the working position is incompatible with task requirements and operator safety.' },
+                { code: 'PET4', title: 'Personal equipment interference', definition: 'Personal protection equipment (helmets, suits, gloves) interferes with normal duties or safety of the operator.' },
+                { code: 'PET5', title: 'Communication equipment inadequate', definition: 'Communication equipment is inadequate or unavailable to support task demands, leading to errors.' },
+                { code: 'PET6', title: 'Fuels or materials', definition: 'Working with fuels chemicals or materials leads to an unsafe situation or contributes to an error.' }
+            ],
+            'COMMUNICATION': [
+                { code: 'PEC1', title: 'Task planning/briefing inadequate', definition: 'Incomplete planning or briefing associated with an activity contributes to an error.' },
+                { code: 'PEC2', title: 'Miscommunication of critical information', definition: 'Miscommunication of information imperative to task completion contributes to an operator error.' },
+                { code: 'PEC3', title: 'Failure to communicate critical information', definition: 'Failure to communicate critical information results in operator error.' },
+                { code: 'PEC4', title: 'Failure to use standard terminology', definition: 'Failure to use clear and concise terms, hand signals, or standard terminology contributes to operator error.' },
+                { code: 'PEC5', title: 'Failure to cross-check or back up other team member’s action or decision', definition: 'Failure to actively monitor or back up other crew/team members’ actions or decisions leads to operator error.' },
+                { code: 'PEC6', title: 'Inadequate communication due to team members rank or position', definition: 'Differences in rank or position within the crew or team limit or jeopardize team communication, contributing to operator error.' }
+            ],
+            'SELF-IMPOSED STRESS': [
+                { code: 'PES1', title: 'Recreational drugs and alcohol', definition: 'Recreational drug or alcohol use impairs operator performance, contributing to an error.' },
+                { code: 'PES2', title: 'Prescribed drugs or OTC medications', definition: 'Use of prescribed or over-the-counter medications interferes with task performance, contributing to an error.' },
+                { code: 'PES3', title: 'Inadequate nutrition, hydration, or dietary practice', definition: 'Inadequate nutrition or hydration degrades operator performance, contributing to an error.' },
+                { code: 'PES4', title: 'Operating with known disqualifying medical condition', definition: 'The operator intentionally performs duties with a known disqualifying medical condition, contributing to an error.' }
+            ],
+            'AWARENESS COGNITIVE FACTORS': [
+                { code: 'PIA1', title: 'Channelized attention', definition: 'Operator focuses attention on a limited number of cues, excluding higher priority cues, contributing to an error.' },
+                { code: 'PIA2', title: 'Confusion', definition: 'Operator’s inability to maintain cohesive awareness of events leads to errors.' },
+                { code: 'PIA3', title: 'Negative habit (using old procedures for a new system)', definition: 'Operator’s tendency to revert to old habits from past experiences leads to errors.' },
+                { code: 'PIA4', title: 'Distraction', definition: 'Interruption or inappropriate redirection of operator attention contributes to an error.' },
+                { code: 'PIA5', title: 'Inattention', definition: 'Operator’s lack of alertness or readiness to process immediately available information contributes to errors.' },
+                { code: 'PIA6', title: 'Geographically lost', definition: 'The operator perceives to be at a different location than they actually are, contributing to an error.' }
+            ],
+            'ADVERSE PSYCHOLOGICAL': [
+                { code: 'PIS1', title: 'Emotional state', definition: 'Strong emotions interfere with operator performance.' },
+                { code: 'PIS2', title: 'Personality style', definition: 'Personality traits (e.g., authoritarianism, impulsivity) negatively affect team interaction, contributing to errors.' },
+                { code: 'PIS3', title: 'Confidence level', definition: 'Inadequate estimation of personal capability leads to errors.' },
+                { code: 'PIS4', title: 'Complacency', definition: 'A false sense of security leads the operator to ignore hazards or underestimate risks.' },
+                { code: 'PIS5', title: 'Peer pressure', definition: 'Pressure to perform an activity despite risks contributes to unsafe performance.' },
+                { code: 'PIS6', title: 'Motivation', definition: 'Excessive or inadequate motivation leads to unsafe operator performance.' },
+                { code: 'PIS7', title: 'Preconceived notion or expectancy', definition: 'Expectations about the course of action lead to unsafe operator performance.' },
+                { code: 'PIS8', title: 'Pre-existing psychological condition', definition: 'Pre-existing psychological disorders contribute to unsafe performance.' },
+                { code: 'PIS9', title: 'Mentally exhausted (burnout)', definition: 'Exhaustion due to high operational or lifestyle tempo leads to unsafe operator performance.' },
+                { code: 'PIS10', title: 'Extreme isolation', definition: 'An individual is subject to long-term isolation, contributing to an error.' },
+                { code: 'PIS11', title: 'Team dysfunction', definition: 'Long-term close proximity or confinement contributes to unsafe operator performance.' },
+                { code: 'PIS12', title: 'Group think', definition: 'Excessive tendency toward group conformity over independent decision-making contributes to unsafe performance.' }
+            ],
+            'ADVERSE PHYSIOLOGICAL': [
+                { code: 'PIF1', title: 'Injury or illness existed during operation', definition: 'Pre-existing physical illness or injury degrades operator performance.' },
+                { code: 'PIF2', title: 'Mental fatigue', definition: 'Mental fatigue due to restricted sleep or prolonged wakefulness leads to degraded performance.' },
+                { code: 'PIF3', title: 'Physical fatigue', definition: 'Physical fatigue due to overuse leads to degraded performance.' },
+                { code: 'PIF4', title: 'Hypoxia', definition: 'Insufficient oxygen supply to the body impairs operator performance.' },
+                { code: 'PIF5', title: 'Decompression sickness', definition: 'Nitrogen bubbles in blood or tissues due to rapid pressure change cause unsafe conditions for the operator.' },
+                { code: 'PIF6', title: 'Vibration stress', definition: 'Excessive vibration exposure degrades physical or cognitive performance.' }
+            ],
+            'PHYSICAL OR MENTAL': [
+                { code: 'PIM1', title: 'Body size or movement limitations', definition: 'Size, strength, dexterity, mobility limitations create unsafe conditions for the operator.' },
+                { code: 'PIM2', title: 'Physical strength & coordination inappropriate for task demands', definition: 'Insufficient physical strength or coordination leads to errors.' },
+                { code: 'PIM3', title: 'Memory or learning capability', definition: 'Inadequate memory capacity degrades performance.' },
+                { code: 'PIM4', title: 'Information processing capability', definition: 'Insufficient mental resources to process information contribute to errors.' }
+            ],
+            'COMPETENCE OR SKILLS': [
+                { code: 'PIC1', title: 'Inadequate experience', definition: 'Insufficient experience with a task leads to errors.' },
+                { code: 'PIC2', title: 'Lack of proficiency', definition: 'Operator’s capability does not meet performance expectations.' },
+                { code: 'PIC3', title: 'Inadequate training or currency', definition: 'Failure to meet general training requirements leads to errors.' }
+            ],
+            'PERCEPTION': [
+                { code: 'PIP1', title: 'Motion illusion', definition: 'Incorrect physical sensations of orientation or motion contribute to errors.' },
+                { code: 'PIP2', title: 'Visual illusion', definition: 'Incorrect perception of orientation or motion due to visual stimuli leads to errors.' },
+                { code: 'PIP3', title: 'Misperception of changing environment', definition: 'Misjudging altitude, speed, or other conditions contributes to errors.' },
+                { code: 'PIP4', title: 'Misread or misinterpreted instrument', definition: 'Incorrectly reading or interpreting instrument data leads to errors.' },
+                { code: 'PIP5', title: 'Misinterpretation of auditory or sound cues', definition: 'Incorrectly interpreted auditory inputs contribute to errors.' },
+                { code: 'PIP6', title: 'Temporal or time distortion', definition: 'Operator experiences a distortion of time due to stress, leading to errors.' }
+            ]
+        }
+    };
+
+
+function showCategories(layer) {
+    iqsmsRef = document.getElementById('iqsmsRef').value;
+    fullPath = [iqsmsRef, layer];  // Add IQSMS Ref at the start of the path
+    updateBreadcrumb();
+
+    document.getElementById('layers').style.display = 'none';
+
+    if (layer === 'PRECONDITIONS') {
+        // Show subcategories for PRECONDITIONS
+        showSubcategories(layer);
+    } else {
+        let categoriesDiv = document.getElementById('categories');
+        categoriesDiv.innerHTML = '';
+        categoriesDiv.style.display = 'block';
+        data[layer].forEach(cat => {
+            let btn = document.createElement('button');
+            btn.className = `category-btn ${layer}`;
+            btn.innerHTML = cat;
+            btn.onclick = () => showItems(cat, layer);
+            categoriesDiv.appendChild(btn);
+        });
+    }
+}
+
+function showCategories(layer) {
+    iqsmsRef = document.getElementById('iqsmsRef').value;
+    fullPath = [iqsmsRef, layer];  // Add IQSMS Ref at the start of the path
+    updateBreadcrumb();
+
+    document.getElementById('layers').style.display = 'none';
+
+    if (layer === 'PRECONDITIONS') {
+        // Show categories for PRECONDITIONS
+        showPreconditionsCategories(layer);
+    } else {
+        let categoriesDiv = document.getElementById('categories');
+        categoriesDiv.innerHTML = '';
+        categoriesDiv.style.display = 'block';
+        data[layer].forEach(cat => {
+            let btn = document.createElement('button');
+            btn.className = `category-btn ${layer}`;
+            btn.innerHTML = cat;
+            btn.onclick = () => showItems(cat, layer);
+            categoriesDiv.appendChild(btn);
+        });
+    }
+}
+
+function showPreconditionsCategories(layer) {
+    let categoriesDiv = document.getElementById('categories');
+    categoriesDiv.innerHTML = '';
+    categoriesDiv.style.display = 'block';
+
+    // List all categories under PRECONDITIONS
+    let preconditionsCategories = Object.keys(data['subcategories']);
+    preconditionsCategories.forEach(category => {
+        let btn = document.createElement('button');
+        btn.className = `category-btn ${layer}`;
+        btn.innerHTML = category;
+        btn.onclick = () => showPreconditionsSubcategories(layer, category);
+        categoriesDiv.appendChild(btn);
+    });
+}
+
+function showPreconditionsSubcategories(layer, category) {
+    fullPath.push(category);
+    updateBreadcrumb();
+
+    let subcategoriesDiv = document.getElementById('subcategories');
+    subcategoriesDiv.innerHTML = '';
+    subcategoriesDiv.style.display = 'block';
+
+    let categoriesDiv = document.getElementById('categories');
+    categoriesDiv.style.display = 'none';
+
+    // Display subcategories for the selected category
+    data['subcategories'][category].forEach(subcat => {
+        let btn = document.createElement('button');
+        btn.className = `subcategory-btn ${layer}`;
+        btn.innerHTML = subcat;
+        btn.onclick = () => showItems(subcat, layer);
+        subcategoriesDiv.appendChild(btn);
+    });
+}
+
+function showItems(subcategory, layer) {
+    fullPath.push(subcategory);
+    updateBreadcrumb();
+
+    document.getElementById('categories').style.display = 'none';
+    document.getElementById('subcategories').style.display = 'none';
+
+    let itemsDiv = document.getElementById('items');
+    itemsDiv.innerHTML = '';
+    itemsDiv.style.display = 'block';
+
+    // Display items for the selected subcategory
+    data['items'][subcategory].forEach(item => {
+        let btn = document.createElement('button');
+        btn.className = `item-btn ${layer}`;
+        btn.innerHTML = `(${item.code}) ${item.title}`;
+        btn.onclick = () => selectItem(`${item.code} - ${item.title}`, layer);
+
+        let tooltip = document.createElement('span');
+        tooltip.className = 'tooltiptext';
+        tooltip.innerHTML = item.definition;
+
+        let tooltipWrapper = document.createElement('div');
+        tooltipWrapper.className = 'tooltip';
+        tooltipWrapper.appendChild(btn);
+        tooltipWrapper.appendChild(tooltip);
+
+        itemsDiv.appendChild(tooltipWrapper);
+    });
+}
+
+
+
+    function selectItem(item, layer) {
+        fullPath.push(item);
+        updateBreadcrumb();
+        addSelectedItemToList(item, layer);
+    }
+
+    function addSelectedItemToList(item, layer) {
+        let pathList = document.getElementById('pathList');
+        let listItem = document.createElement('li');
+        listItem.textContent = `${iqsmsRef} (${item.split(" - ")[0]}) ${item.split(" - ")[1]}`;
+        listItem.className = layer;
+
+        
+    // Add right-click event to display options
+    listItem.oncontextmenu = function (event) {
+        event.preventDefault();
+
+        // Create context menu
+        let menu = document.createElement('div');
+        menu.style.position = 'absolute';
+        menu.style.left = event.pageX + 'px';
+        menu.style.top = event.pageY + 'px';
+        menu.style.backgroundColor = 'white';
+        menu.style.border = '1px solid black';
+        menu.style.padding = '10px';
+        menu.style.zIndex = 1000;
+
+        // Add options to the context menu
+        let removeOption = document.createElement('div');
+        removeOption.textContent = 'Remove';
+        removeOption.style.padding = '5px';
+        removeOption.onmouseover = () => removeOption.style.backgroundColor = '#f0f0f0';
+        removeOption.onmouseout = () => removeOption.style.backgroundColor = 'white';
+        removeOption.onclick = () => {
+            removeSelectedItem(listItem);
+            document.body.removeChild(menu);
+        };
+        menu.appendChild(removeOption);
+
+        let primaryOption = document.createElement('div');
+        primaryOption.textContent = 'Set as Primary';
+        primaryOption.style.padding = '5px';
+        primaryOption.onmouseover = () => primaryOption.style.backgroundColor = '#f0f0f0';
+        primaryOption.onmouseout = () => primaryOption.style.backgroundColor = 'white';
+        primaryOption.onclick = () => {
+            setAsPrimary(listItem);
+            document.body.removeChild(menu);
+        };
+        menu.appendChild(primaryOption);
+
+        document.body.appendChild(menu);
+
+        // Remove menu if user clicks elsewhere
+        document.onclick = function () {
+            if (menu) {
+                document.body.removeChild(menu);
+            }
+        };
+
+        return false;
+    };
+    
+
+        pathList.appendChild(listItem);
+    }
+
+    function removeSelectedItem(itemElement) {
+        itemElement.remove();
+    }
+
+    function setAsPrimary(itemElement) {
+        itemElement.classList.toggle('primary');
+    }
+
+    function clearAllSelectedItems() {
+        document.getElementById('pathList').innerHTML = '';
+    }
+
+    function updateBreadcrumb() {
+        document.getElementById('breadcrumb').innerHTML = `You are here: ${fullPath.join(' > ')}`;
+        document.getElementById('path').innerHTML = `Full path: ${fullPath.join(' > ')}`;
+    }
+
+    function startOver() {
+        fullPath = [];
+        document.getElementById('breadcrumb').innerHTML = 'You are here: ';
+        document.getElementById('path').innerHTML = 'Full path: ';
+        document.getElementById('layers').style.display = 'block';
+        document.getElementById('categories').style.display = 'none';
+        document.getElementById('subcategories').style.display = 'none';
+        document.getElementById('items').style.display = 'none';
+    }
+
+function exportToCSV() {
+    let csvContent = "data:text/csv;charset=utf-8,";
+    const header = ["IQSMS Reference", "Layer", "Category", "Subcategory", "Item Code", "Item Title", "Primary"];
+    csvContent += header.join(",") + "\n";
+
+    const pathList = document.getElementById('pathList').children;
+
+    for (let i = 0; i < pathList.length; i++) {
+        const listItem = pathList[i].textContent;
+        const isPrimary = listItem.includes("⭐") ? "Yes" : "No";
+        const itemText = listItem.split(" - ");
+        const iqmsRef = document.getElementById('iqsmsRef').value || "N/A";
+        const layer = itemText[1] || "N/A";
+        const category = itemText[2] || "N/A";
+        const subcategory = itemText[3] || "N/A";
+        const itemCode = itemText[4] || "N/A";
+        const itemTitle = itemText[5] || "N/A";
+
+        const row = [iqmsRef, layer, category, subcategory, itemCode, itemTitle, isPrimary];
+        csvContent += row.join(",") + "\n";
+    }
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "selected_items.csv");
+    document.body.appendChild(link);
+    link.click();
+}
+
+
+</script>
+
+
+
+</body>
+</html>
