@@ -183,6 +183,7 @@ function goBack() {
     <h3>Selected Items:</h3>	
     <p style="font-style: italic;">Right click item to remove, or to mark as primary.</p>
     <ul id="pathList"></ul>
+    <button id="copyToClipboardBtn" onclick="copyToClipboard()">Copy to Clipboard</button>
 </div>
 
 <script>
@@ -608,6 +609,23 @@ function exportToCSV() {
     link.setAttribute("download", "selected_items.csv");
     document.body.appendChild(link);
     link.click();
+}
+
+    function copyToClipboard() {
+    let selectedItems = [];
+    const pathList = document.getElementById('pathList').children;
+
+    for (let i = 0; i < pathList.length; i++) {
+        const listItem = pathList[i].textContent.split(" - ")[1]; // Get only the item title
+        selectedItems.push(listItem);
+    }
+
+    const textToCopy = selectedItems.join('\n'); // Join items with line breaks between them
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        alert('Items copied to clipboard!');
+    }).catch(err => {
+        alert('Failed to copy: ', err);
+    });
 }
 
 
