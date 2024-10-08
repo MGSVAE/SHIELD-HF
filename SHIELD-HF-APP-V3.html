@@ -630,14 +630,15 @@ function exportToCSV() {
 
 
 
-    function copyToClipboard() {
+function copyToClipboard() {
+    if (navigator.clipboard) {
         const pathList = document.getElementById('pathList').children;
         let textToCopy = "";
 
         for (let i = 0; i < pathList.length; i++) {
             const listItem = pathList[i].textContent;
             const isPrimary = pathList[i].classList.contains('primary') ? " - PRIMARY" : "";
-            textToCopy += listItem + isPrimary + "\n";
+            textToCopy += listItem + isPrimary + "\\n";
         }
 
         navigator.clipboard.writeText(textToCopy).then(() => {
@@ -645,8 +646,11 @@ function exportToCSV() {
         }).catch(err => {
             console.error('Failed to copy: ', err);
         });
+    } else {
+        alert("Clipboard API is not supported in your browser.");
     }
-    </script>
+}
+</script>
     
 
 
